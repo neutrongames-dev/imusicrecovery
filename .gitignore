@@ -1,0 +1,15 @@
+node_modules/
+dist/
+dist-electron/
+release/
+.vite/
+*.log
+.DS_Store
+Thumbs.db
+vendor/native/*.exe
+vendor/native/*.dll
+vendor/native/README.txt
+!vendor/native/.gitkeep
+vendor/native/openssl-legacy.cnf
+vendor/native/licenses/
+vendor/native/ossl-modules/
