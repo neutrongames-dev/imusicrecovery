@@ -1,0 +1,77 @@
+name: Build Windows Desktop
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "electron/**"
+      - "native/**"
+      - "src/**"
+      - "public/**"
+      - "scripts/**"
+      - "tests/**"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.ts"
+      - "tsconfig*.json"
+      - ".github/workflows/build-windows.yml"
+  pull_request:
+    paths:
+      - "electron/**"
+      - "native/**"
+      - "src/**"
+      - "scripts/**"
+      - "package.json"
+      - "package-lock.json"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install JavaScript dependencies
+        run: npm ci --no-audit --no-fund
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-toolchain
+            mingw-w64-ucrt-x86_64-libimobiledevice
+            mingw-w64-ucrt-x86_64-pkgconf
+
+      - name: Build and stage read-only Apple runtime
+        shell: msys2 {0}
+        run: ./scripts/stage-msys2-runtime.sh
+
+      - name: Verify native runtime
+        run: node scripts/verify-native-runtime.mjs
+
+      - name: Verify desktop application
+        run: npm run verify
+
+      - name: Package Windows installer and portable build
+        run: npm run dist:win
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: iMusicRecovery-Windows-x64
+          path: |
+            release/*.exe
+            release/*.blockmap
+          if-no-files-found: error
+          retention-days: 30
